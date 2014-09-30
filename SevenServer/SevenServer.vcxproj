@@ -103,6 +103,7 @@
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="ClientDlg.h" />
     <ClInclude Include="IOCPServer.h" />
+    <ClInclude Include="macros.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SevenServer.h" />
     <ClInclude Include="SevenServerDlg.h" />

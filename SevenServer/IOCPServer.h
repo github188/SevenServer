@@ -98,28 +98,24 @@ struct ClientContext
 		m_Socket = INVALID_SOCKET;
 	}
 };
+class CSevenServerDlg;
 
-typedef void (CALLBACK* NOTIFYPROC)(ClientContext*, UINT nCode);
-
+typedef void (CALLBACK* NOTIFYPROC)(LPVOID, ClientContext*, UINT nCode);
 typedef CList<ClientContext*, ClientContext* > ContextList;
 
 class CIOCPServer
 {
 private:
+	
+	LONG					m_nWorkerCnt;
 
-	NOTIFYPROC					m_pNotifyProc;
-
-
-	UINT					m_nMaxConnections; // 最大连接数
-	LONG				m_nWorkerCnt;
-
-	bool				m_bInit;
-	bool				m_bDisconnectAll;
-	BYTE				m_bPacketFlag[4];
+	bool					m_bInit;
+	bool					m_bDisconnectAll;
+	BYTE					m_bPacketFlag[4];
 	ContextList				m_listContexts;
 	ContextList				m_listFreePool;
 	WSAEVENT				m_hEvent;
-	SOCKET					m_socListen;    
+	
 	HANDLE					m_hKillEvent;
 	HANDLE					m_hThread;
 	HANDLE					m_hCompletionPort;
@@ -127,19 +123,23 @@ private:
 
 	LONG					m_nKeepLiveTime; // 心跳超时
 
-	// Thread Pool vables
+	// Thread Pool 
 	// 	LONG					m_nThreadPoolMin;
 	// 	LONG					m_nThreadPoolMax;
 	LONG					m_nThreadPoolNumber;
 	//LONG					m_nCurrentThreads;
 	//LONG					m_nBusyThreads;
-
+	
 	static CRITICAL_SECTION	m_cs;
 public:
+	CSevenServerDlg*        m_pDialog;
+	NOTIFYPROC				m_pNotifyProc;
+	SOCKET					m_socListen;    
+	UINT					m_nMaxConnections; // 最大连接数
 	void DisconnectAll();
 	CIOCPServer();
 	virtual ~CIOCPServer();
-	bool Initialize(NOTIFYPROC pNotifyProc, int nMaxConnections, int nPort);
+	bool Initialize(NOTIFYPROC pNotifyProc,CSevenServerDlg* pDlg,int nMaxConnections, int nPort);
 	static unsigned __stdcall ListenThreadProc(LPVOID lpVoid);
 	static unsigned __stdcall ThreadPoolFunc(LPVOID WorkContext);
 	void Send(ClientContext* pContext, LPBYTE lpData, UINT nSize);

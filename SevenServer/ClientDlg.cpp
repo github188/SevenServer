@@ -32,3 +32,7 @@ END_MESSAGE_MAP()
 
 
 // ClientDlg 消息处理程序
+void ClientDlg::OnReceiveComplete()
+{
+	return;
+}

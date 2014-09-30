@@ -16,7 +16,7 @@ CIOCPServer::CIOCPServer()
 	InitializeCriticalSection(&m_cs);
 	m_hThread			= NULL;
 	m_hKillEvent		= CreateEvent(NULL, TRUE, FALSE, NULL);
-	m_socListen			= NULL;
+	m_socListen			= INVALID_SOCKET;
 
 	m_bTimeToKill		= false;
 	m_bDisconnectAll	= false;
@@ -42,12 +42,14 @@ CIOCPServer::~CIOCPServer()
 	}catch(...){}
 }
 
-bool CIOCPServer::Initialize(NOTIFYPROC pNotifyProc, int nMaxConnections, int nPort)
+bool CIOCPServer::Initialize(NOTIFYPROC pNotifyProc,CSevenServerDlg *pDlg, int nMaxConnections, int nPort)
 {
-	m_pNotifyProc	= pNotifyProc;
-	m_nMaxConnections = nMaxConnections;
+	m_pNotifyProc		= pNotifyProc;
+	m_nMaxConnections	= nMaxConnections;
+	m_pDialog			= pDlg;		
 	//////////////////////////////////////////////////////////////////////////
 	m_socListen = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	
 	if (m_socListen == INVALID_SOCKET)
 	{
 		return false;
@@ -228,7 +230,7 @@ void CIOCPServer::OnAccept()
 		return;
 	}
 
-	m_pNotifyProc(pContext, NC_CLIENT_CONNECT);
+	m_pNotifyProc(m_pDialog,pContext, NC_CLIENT_CONNECT);
 
 	// Post to WSARecv Next
 	PostRecv(pContext);
@@ -484,7 +486,7 @@ bool CIOCPServer::OnClientReading(ClientContext* pContext, DWORD dwIoSize)
 				{
 					pContext->m_DeCompressionBuffer.ClearBuffer();
 					pContext->m_DeCompressionBuffer.Write(pDeCompressionData, destLen);
-					m_pNotifyProc(pContext, NC_RECEIVE_COMPLETE);
+					m_pNotifyProc(m_pDialog,pContext, NC_RECEIVE_COMPLETE);
 				}
 				else
 				{
@@ -526,7 +528,7 @@ bool CIOCPServer::OnClientWriting(ClientContext* pContext, DWORD dwIoSize)
 		{
 			OVERLAPPEDPLUS * pOverlap = new OVERLAPPEDPLUS(IOWrite);
 
-			m_pNotifyProc(pContext, NC_TRANSMIT);
+			m_pNotifyProc(m_pDialog,pContext, NC_TRANSMIT);
 			pContext->m_wsaOutBuffer.buf = (char*) pContext->m_WriteBuffer.GetBuffer();
 			pContext->m_wsaOutBuffer.len = pContext->m_WriteBuffer.GetBufferLen();
 			int nRetVal = WSASend(pContext->m_Socket, 
@@ -604,7 +606,7 @@ void CIOCPServer::RemoveStaleClient(ClientContext* pContext, BOOL bGraceful)
 		while (!HasOverlappedIoCompleted((LPOVERLAPPED)pContext)) 
 			Sleep(0);
 
-		m_pNotifyProc(pContext, NC_CLIENT_DISCONNECT);
+		m_pNotifyProc(m_pDialog,pContext, NC_CLIENT_DISCONNECT);
 		MoveToFreePool(pContext);
 	}
 }

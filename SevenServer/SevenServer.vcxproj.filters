@@ -54,6 +54,9 @@
     <ClInclude Include="ClientDlg.h">
       <Filter>ClientDlg</Filter>
     </ClInclude>
+    <ClInclude Include="macros.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SevenServer.cpp">
