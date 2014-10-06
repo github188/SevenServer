@@ -40,8 +40,13 @@
 
 #include "macros.h"
 
+typedef struct COMMANDSTRUCT{
+	int     command;
+	int		DialogPointer;  // which dialog handle this command
+}Cmd;
 enum{
-	CLIENT_DLG = 1
+	SHELL_DLG = 1,
+	FILE_DLG 
 };
 
 

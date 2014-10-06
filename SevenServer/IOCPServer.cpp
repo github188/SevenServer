@@ -192,30 +192,30 @@ void CIOCPServer::OnAccept()
 		return;
 	}
 
-	const char chOpt = 1;
-	// Set KeepAlive 开启保活机制
-	if (setsockopt(pContext->m_Socket, SOL_SOCKET, SO_KEEPALIVE, (char *)&chOpt, sizeof(chOpt)) != 0)
-	{
-		TRACE(_T("setsockopt() error\n"), WSAGetLastError());
-	}
+/*	const char chOpt = 1;*/
+// 	// Set KeepAlive 开启保活机制
+// 	if (setsockopt(pContext->m_Socket, SOL_SOCKET, SO_KEEPALIVE, (char *)&chOpt, sizeof(chOpt)) != 0)
+// 	{
+// 		TRACE(_T("setsockopt() error\n"), WSAGetLastError());
+// 	}
 
-	// 设置超时详细信息
-	tcp_keepalive	klive;
-	klive.onoff = 1; // 启用保活
-	klive.keepalivetime = m_nKeepLiveTime;
-	klive.keepaliveinterval = 1000 * 10; // 重试间隔为10秒 Resend if No-Reply
-	WSAIoctl
-		(
-		pContext->m_Socket, 
-		SIO_KEEPALIVE_VALS,
-		&klive,
-		sizeof(tcp_keepalive),
-		NULL,
-		0,
-		(unsigned long *)&chOpt,
-		0,
-		NULL
-		);
+// 	设置超时详细信息
+// 			tcp_keepalive	klive;
+// 			klive.onoff = 1; // 启用保活
+// 			klive.keepalivetime = m_nKeepLiveTime;
+// 			klive.keepaliveinterval = 1000 * 10; // 重试间隔为10秒 Resend if No-Reply
+// 			WSAIoctl
+// 				(
+// 				pContext->m_Socket, 
+// 				SIO_KEEPALIVE_VALS,
+// 				&klive,
+// 				sizeof(tcp_keepalive),
+// 				NULL,
+// 				0,
+// 				(unsigned long *)&chOpt,
+// 				0,
+// 				NULL
+// 				);
 
 	CLock cs(m_cs, _T("OnAccept"));
 	// Hold a reference to the context
@@ -243,7 +243,7 @@ bool CIOCPServer::InitializeIOCP(void)
 	UINT  nThreadID;
 	SYSTEM_INFO systemInfo;
 
-	m_hCompletionPort = CreateIoCompletionPort( NULL, NULL, 0, 0 );
+	m_hCompletionPort = CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, 0, 0 );
 	if ( m_hCompletionPort == NULL ) 
 		return false;
 

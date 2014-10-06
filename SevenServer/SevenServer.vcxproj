@@ -102,6 +102,8 @@
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="ClientDlg.h" />
+    <ClInclude Include="CmdDialog.h" />
+    <ClInclude Include="FileDlg.h" />
     <ClInclude Include="IOCPServer.h" />
     <ClInclude Include="macros.h" />
     <ClInclude Include="Resource.h" />
@@ -113,6 +115,8 @@
   <ItemGroup>
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="ClientDlg.cpp" />
+    <ClCompile Include="CmdDialog.cpp" />
+    <ClCompile Include="FileDlg.cpp" />
     <ClCompile Include="IOCPServer.cpp" />
     <ClCompile Include="SevenServer.cpp" />
     <ClCompile Include="SevenServerDlg.cpp" />
