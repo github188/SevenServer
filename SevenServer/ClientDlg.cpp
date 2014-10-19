@@ -88,6 +88,7 @@ void ClientDlg::OnReceiveComplete(ClientContext* pContext)
 			m_fileDlg->Start(m_piocpServer,pContext);
 			pContext->m_Dialog[0] = FILE_DLG;
 			pContext->m_Dialog[1] = (int)m_fileDlg;
+			break;
 		default:
 			break;
 

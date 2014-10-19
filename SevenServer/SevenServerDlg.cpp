@@ -274,6 +274,9 @@ void CSevenServerDlg::ProcessReceiveComplete(ClientContext *pContext)
 		case SHELL_DLG:
 			((CCmdDialog *)dlg)->OnReceiveComplete();
 			break;
+		case FILE_DLG:
+			((CFileDlg *)dlg)->OnReceiveComplete();
+			break;
 		default:
 			break;
 		}

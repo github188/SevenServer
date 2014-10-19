@@ -96,6 +96,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="res\bitmap1.bmp" />
+    <None Include="res\bmp00001.bmp" />
     <None Include="res\SevenServer.ico" />
     <None Include="res\SevenServer.rc2" />
   </ItemGroup>
